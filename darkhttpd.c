@@ -2222,6 +2222,7 @@ static void process_get(struct connection *conn) {
             "%s" /* server */
             "Accept-Ranges: bytes\r\n"
             "%s" /* keep-alive */
+            "Cache-Control: no-cache"
             "Content-Length: %llu\r\n"
             "Content-Range: bytes %llu-%llu/%llu\r\n"
             "Content-Type: %s\r\n"
@@ -2246,6 +2247,7 @@ static void process_get(struct connection *conn) {
             "%s" /* server */
             "Accept-Ranges: bytes\r\n"
             "%s" /* keep-alive */
+            "Cache-Control: no-cache"
             "Content-Length: %llu\r\n"
             "Content-Type: %s\r\n"
             "Last-Modified: %s\r\n"
