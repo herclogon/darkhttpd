@@ -309,6 +309,7 @@ static uint64_t num_requests = 0, total_in = 0, total_out = 0;
 static int accepting = 1;           /* set to 0 to stop accept()ing */
 static int syslog_enabled = 0;
 static volatile int running = 1; /* signal handler sets this to false */
+static char *_additional_header = ""; /* additional HTTP header */
 
 #define INVALID_UID ((uid_t) -1)
 #define INVALID_GID ((gid_t) -1)
@@ -945,6 +946,8 @@ static void usage(const char *argv0) {
     "\t\tIf the client requested HTTP, forward to HTTPS.\n"
     "\t\tThis is useful if darkhttpd is behind a reverse proxy\n"
     "\t\tthat supports SSL.\n\n");
+    printf("\t--additional-header\n"
+    "\t\tAdditional HTTP headers in the response.\n\n");
 #ifdef HAVE_INET6
     printf("\t--ipv6\n"
     "\t\tListen on IPv6 address.\n\n");
@@ -1160,6 +1163,11 @@ static void parse_commandline(const int argc, char *argv[]) {
         }
         else if (strcmp(argv[i], "--forward-https") == 0) {
             forward_to_https = 1;
+        }
+        else if (strcmp(argv[i], "--additional-header") == 0) {
+            if (++i >= argc)
+                errx(1, "missing filename after --additional-header");
+            _additional_header = argv[i];            
         }
 #ifdef HAVE_INET6
         else if (strcmp(argv[i], "--ipv6") == 0) {
@@ -2027,6 +2035,17 @@ static void generate_dir_listing(struct connection *conn, const char *path,
     conn->http_code = 200;
 }
 
+/* Return additional HTTP headers with line endings at the end if set. */
+static char* additional_header() {    
+    if (strlen(_additional_header)) {
+        char *headers = (char*)malloc(strlen(_additional_header) * sizeof(char)+64);
+        sprintf(headers, "%s \r\n", _additional_header);
+        return headers;
+    } 
+    return "";
+}
+
+
 /* Process a GET/HEAD request. */
 static void process_get(struct connection *conn) {
     char *decoded_url, *end, *target, *if_mod_since;
@@ -2249,10 +2268,11 @@ static void process_get(struct connection *conn) {
             "Content-Length: %llu\r\n"
             "Content-Type: %s\r\n"
             "Last-Modified: %s\r\n"
+            "%s"
             "\r\n"
             ,
             rfc1123_date(date, now), server_hdr, keep_alive(conn),
-            llu(conn->reply_length), mimetype, lastmod
+            llu(conn->reply_length), mimetype, lastmod, additional_header()
         );
         conn->http_code = 200;
     }
